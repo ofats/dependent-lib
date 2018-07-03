@@ -1,44 +1,109 @@
 #include "catch.h"
 #include "dependent.h"
 
+#include <map>
 #include <set>
 #include <iostream>
 #include <scoped_allocator>
 
 namespace {
 
+constexpr short arr1[] = {1, 2, 6, 2, 6};
+
 TEST_CASE("size_type", "[dependent_lib]") {
   using namespace dependent_lib::detail;
 
-  static_assert(std::is_same<size_type_t<uint8_t>, int8_t>::value, "");
-  static_assert(std::is_same<size_type_t<uint16_t>, int16_t>::value, "");
-  static_assert(std::is_same<size_type_t<uint32_t>, int32_t>::value, "");
-  static_assert(std::is_same<size_type_t<uint64_t>, int64_t>::value, "");
+  static_assert(std::is_same<size_type_t<int8_t>, uint8_t>::value, "");
+  static_assert(std::is_same<size_type_t<int16_t>, uint16_t>::value, "");
+  static_assert(std::is_same<size_type_t<int32_t>, uint32_t>::value, "");
+  static_assert(std::is_same<size_type_t<int64_t>, uint64_t>::value, "");
 
   struct big {
       uint64_t one, two;
   };
-  static_assert(std::is_same<size_type_t<big>, int64_t>::value, "");
+  static_assert(std::is_same<size_type_t<big>, uint64_t>::value, "");
+}
+
+TEST_CASE("required_size_in_types", "[dependent_lib]") {
+  using namespace dependent_lib::detail;
+  constexpr int64_t uint32_max = std::numeric_limits<uint32_t>::max();
+
+  // fits
+  static_assert(required_space_in_types<char>(9) == 10, "");
+  static_assert(required_space_in_types<char>(99) == 100, "");
+  static_assert(required_space_in_types<int32_t>(3500) == 3501, "");
+  static_assert(required_space_in_types<int32_t>(uint32_max - 1) == uint32_max,
+                "");
+
+  // doesn't fit
+  static_assert(required_space_in_types<char>(128) == 129, "");
+  static_assert(required_space_in_types<char>(256) == 257 + 16, "");
+  static_assert(required_space_in_types<char>(3500) == 3501 + 16, "");
+  static_assert(required_space_in_types<int32_t>(uint32_max) == uint32_max + 5,
+                "");
+}
+
+TEST_CASE("concepts", "[dependent_lib]") {
+  using namespace dependent_lib;
+
+  static_assert(!ForwardIterator<int>, "");
+  static_assert(ForwardIterator<int*>, "");
+  static_assert(ForwardIterator<std::vector<int>::iterator>, "");
+  static_assert(ForwardIterator<std::vector<int>::const_iterator>, "");
+  static_assert(ForwardIterator<std::map<int, int>::iterator>, "");
+
+  static_assert(ForwardRange<std::vector<int>>, "");
+  static_assert(!ForwardRange<int>, "");
+  static_assert(ForwardRange<int(&)[3]>, "");
+  static_assert(ForwardRange<decltype(arr1)>, "");
 }
 
 TEST_CASE("smoking_test", "[dependent_lib]") {
-  short arr[] = {1, 2, 6, 2, 6};
-
   // init 1 vector
   {
     std::allocator<short> a{};
-    dependent_lib::vector<short, std::allocator<short>> dv(std::begin(arr),
-                                                           std::end(arr), a);
-    REQUIRE(dv.size() == 5);
+    dependent_lib::vector<short, std::allocator<short>> dv(
+        std::allocator_arg_t{}, a, std::begin(arr1), std::end(arr1));
+    REQUIRE(dv.as_span().size() == 5);
     dv.destroy(a);
   }
   {
-    using allocator = std::scoped_allocator_adaptor<std::allocator<short>>;
-    using vec_t = dependent_lib::vector<short, allocator>;
-    std::set<vec_t, std::less<>, allocator> s;
-    static_assert(std::uses_allocator<vec_t, allocator>::value, "");
+    using vec_allocator = dependent_lib::allocator_adaptor<std::allocator<short>>;
+    using vec_t = dependent_lib::vector<short, vec_allocator>;
+    static_assert(dependent_lib::DependentType<vec_t, vec_allocator>, "");
+    static_assert(std::uses_allocator<vec_t, vec_allocator>::value, "");
 
-    s.emplace(std::begin(arr), std::end(arr));
+    using set_allocator = dependent_lib::allocator_adaptor<std::allocator<vec_t>>;
+    static_assert(std::uses_allocator<vec_t, set_allocator>::value, "");
+
+    std::set<vec_t, std::less<>, set_allocator> s;
+
+    s.emplace(std::begin(arr1), std::end(arr1));
+  }
+  {
+    using vec_allocator =
+        dependent_lib::allocator_adaptor<std::allocator<short>>;
+    using vec_t = dependent_lib::vector<short, vec_allocator>;
+    static_assert(dependent_lib::DependentType<vec_t, vec_allocator>, "");
+    static_assert(std::uses_allocator<vec_t, vec_allocator>::value, "");
+
+    using outer_allocator =
+        dependent_lib::allocator_adaptor<std::allocator<vec_t>>;
+    static_assert(std::uses_allocator<vec_t, outer_allocator>::value, "");
+
+    std::vector<vec_t, outer_allocator> v;
+
+    v.emplace_back(std::begin(arr1), std::end(arr1));
+  }
+  {
+    using vec_allocator =
+        dependent_lib::allocator_adaptor<std::allocator<int>>;
+    using vec_t = dependent_lib::vector<int, vec_allocator>;
+    using outer_allocator = dependent_lib::allocator_adaptor<
+        std::allocator<std::pair<const int, vec_t>>>;
+
+    std::map<int, vec_t, std::less<>, outer_allocator> mp;
+    mp.emplace(3, arr1);
   }
 }
 

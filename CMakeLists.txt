@@ -9,8 +9,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -Werror -g")
 project(hz)
 
 include(FindPkgConfig)
+pkg_search_module(gsl REQUIRED gsl)
 
 include_directories(./)
+include_directories(${gsl_INCLUDE_DIRS})
 
 set(HEADER_FILE
     catch.h
