@@ -58,53 +58,67 @@ TEST_CASE("concepts", "[dependent_lib]") {
   static_assert(ForwardRange<decltype(arr1)>, "");
 }
 
-TEST_CASE("smoking_test", "[dependent_lib]") {
-  // init 1 vector
-  {
+TEST_CASE("destroy", "[dependent_lib]") {
     std::allocator<short> a{};
     dependent_lib::vector<short, std::allocator<short>> dv(
         std::allocator_arg_t{}, a, std::begin(arr1), std::end(arr1));
     REQUIRE(dv.as_span().size() == 5);
     dv.destroy(a);
-  }
-  {
-    using vec_allocator = dependent_lib::allocator_adaptor<std::allocator<short>>;
-    using vec_t = dependent_lib::vector<short, vec_allocator>;
-    static_assert(dependent_lib::DependentType<vec_t, vec_allocator>, "");
-    static_assert(std::uses_allocator<vec_t, vec_allocator>::value, "");
+}
 
-    using set_allocator = dependent_lib::allocator_adaptor<std::allocator<vec_t>>;
-    static_assert(std::uses_allocator<vec_t, set_allocator>::value, "");
+TEST_CASE("set_of_vector", "[dependent_lib]") {
+  using vec_allocator = dependent_lib::allocator_adaptor<std::allocator<short>>;
+  using vec_t = dependent_lib::vector<short, vec_allocator>;
+  static_assert(dependent_lib::DependentType<vec_t, vec_allocator>, "");
+  static_assert(std::uses_allocator<vec_t, vec_allocator>::value, "");
 
-    std::set<vec_t, std::less<>, set_allocator> s;
+  using set_allocator = dependent_lib::allocator_adaptor<std::allocator<vec_t>>;
+  static_assert(std::uses_allocator<vec_t, set_allocator>::value, "");
 
-    s.emplace(std::begin(arr1), std::end(arr1));
-  }
-  {
-    using vec_allocator =
-        dependent_lib::allocator_adaptor<std::allocator<short>>;
-    using vec_t = dependent_lib::vector<short, vec_allocator>;
-    static_assert(dependent_lib::DependentType<vec_t, vec_allocator>, "");
-    static_assert(std::uses_allocator<vec_t, vec_allocator>::value, "");
+  std::set<vec_t, std::less<>, set_allocator> s;
 
-    using outer_allocator =
-        dependent_lib::allocator_adaptor<std::allocator<vec_t>>;
-    static_assert(std::uses_allocator<vec_t, outer_allocator>::value, "");
+  s.emplace(std::begin(arr1), std::end(arr1));
+}
 
-    std::vector<vec_t, outer_allocator> v;
+TEST_CASE("vector_of_vector", "[dependent_lib]") {
+  using vec_allocator = dependent_lib::allocator_adaptor<std::allocator<short>>;
+  using vec_t = dependent_lib::vector<short, vec_allocator>;
+  static_assert(dependent_lib::DependentType<vec_t, vec_allocator>, "");
+  static_assert(std::uses_allocator<vec_t, vec_allocator>::value, "");
 
-    v.emplace_back(std::begin(arr1), std::end(arr1));
-  }
-  {
-    using vec_allocator =
-        dependent_lib::allocator_adaptor<std::allocator<int>>;
-    using vec_t = dependent_lib::vector<int, vec_allocator>;
-    using outer_allocator = dependent_lib::allocator_adaptor<
-        std::allocator<std::pair<const int, vec_t>>>;
+  using outer_allocator =
+      dependent_lib::allocator_adaptor<std::allocator<vec_t>>;
+  static_assert(std::uses_allocator<vec_t, outer_allocator>::value, "");
 
-    std::map<int, vec_t, std::less<>, outer_allocator> mp;
-    mp.emplace(3, arr1);
-  }
+  std::vector<vec_t, outer_allocator> v;
+
+  v.emplace_back(std::begin(arr1), std::end(arr1));
+}
+
+TEST_CASE("big_vector_of_vector", "[dependent_lib]") {
+  using vec_allocator = dependent_lib::allocator_adaptor<std::allocator<short>>;
+  using vec_t = dependent_lib::vector<short, vec_allocator>;
+  static_assert(dependent_lib::DependentType<vec_t, vec_allocator>, "");
+  static_assert(std::uses_allocator<vec_t, vec_allocator>::value, "");
+
+  using outer_allocator =
+      dependent_lib::allocator_adaptor<std::allocator<vec_t>>;
+  static_assert(std::uses_allocator<vec_t, outer_allocator>::value, "");
+
+  std::vector<vec_t, outer_allocator> v;
+
+  std::vector<short> input(1'000'000, 1);
+  v.emplace_back(input);
+}
+
+TEST_CASE("map_of_vector", "[dependent_lib]") {
+  using vec_allocator = dependent_lib::allocator_adaptor<std::allocator<int>>;
+  using vec_t = dependent_lib::vector<int, vec_allocator>;
+  using outer_allocator = dependent_lib::allocator_adaptor<
+      std::allocator<std::pair<const int, vec_t>>>;
+
+  std::map<int, vec_t, std::less<>, outer_allocator> mp;
+  mp.emplace(3, arr1);
 }
 
 // TODO: tests

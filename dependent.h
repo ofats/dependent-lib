@@ -153,19 +153,60 @@ struct allocator_adaptor_impl : A {
   }
 };
 
+template <typename T, typename U>
+using forward_const_t = std::conditional_t<std::is_const<T>::value, const U, U>;
+
+template <typename U, typename T>
+auto unaligned_read(T* ptr) -> std::pair<T*, forward_const_t<T, U>&> {
+  using u_ptr = forward_const_t<T, U>*;
+  auto* raw_ptr =
+      reinterpret_cast<void*>(const_cast<std::remove_const_t<T>*>(ptr));
+
+  // Read U.
+  std::size_t fake_size = std::numeric_limits<std::size_t>::max();
+  raw_ptr = std::align(alignof(U), sizeof(U), raw_ptr, fake_size);
+  assert(raw_ptr);
+  const u_ptr as_u = static_cast<u_ptr>(raw_ptr);
+
+  // Advance ptr.
+  raw_ptr = reinterpret_cast<void*>(const_cast<U*>(as_u + 1));
+  raw_ptr = std::align(alignof(T), sizeof(T), raw_ptr, fake_size);
+  assert(raw_ptr);
+
+  return {static_cast<std::remove_const_t<T>*>(raw_ptr), *as_u};
+}
+
 template <typename T, typename Span, typename Alloc>
 struct leaky_vector {
   using allocator_type = Alloc;
   using alloc_traits = std::allocator_traits<Alloc>;
   using pointer = typename alloc_traits::pointer;
-  using size_type = std::ptrdiff_t;
+  using size_type = std::size_t;
   using span_type = Span;
+
+  static constexpr std::size_t big_size_marker =
+      std::numeric_limits<size_type_t<T>>::max();
 
   pointer data_;
 
-  std::ptrdiff_t size_offset() const noexcept {
-      
-      return 1;
+  std::pair<const T*, const T*> begin_end() const noexcept {
+    const T* begin = &*data_ + 1;
+    if (small_size() < big_size_marker) {
+      return { begin, begin + small_size() };
+    }
+    std::size_t big_size = 0;
+    std::tie(begin, big_size) = unaligned_read<std::size_t>(begin);
+    return { begin, begin + big_size };
+  }
+
+  std::pair<T*, T*> begin_end() noexcept {
+    auto p = static_cast<const leaky_vector*>(this)->begin_end();
+    return {const_cast<T*>(p.first), const_cast<T*>(p.second)};
+  }
+
+  size_type size() const noexcept {
+    auto p = begin_end();
+    return p.second - p.first;
   }
 
   detail::size_type_t<T>& small_size() {
@@ -176,15 +217,30 @@ struct leaky_vector {
     return *reinterpret_cast<const detail::size_type_t<T>*>(data_);
   }
 
+  T* unaligned_write_size(size_type dist) {
+    if (dist < big_size_marker) {
+      small_size() = dist;
+      return &*data_ + 1;
+    }
+
+    small_size() = big_size_marker;
+    auto p = unaligned_read<std::size_t>(&*data_ + 1);
+    p.second = static_cast<std::size_t>(dist);
+    return p.first;
+  }
+
+  constexpr static std::size_t required_allocation_size(std::ptrdiff_t dist) {
+    auto space_in_types = detail::required_space_in_types<T>(dist);
+    return space_in_types * sizeof(T);
+  }
+
   template <typename I, typename = std::enable_if_t<ForwardIterator<I>>>
   leaky_vector(std::allocator_arg_t, allocator_type a, I f, I l) {
     auto dist = std::distance(f, l);
-    auto space_in_types = detail::required_space_in_types<T>(dist);
-    auto allocated_memory = space_in_types * sizeof(T);
+    auto allocated_memory = required_allocation_size(dist);
     data_ = alloc_traits::allocate(a, allocated_memory);
-    small_size() = dist;
 
-    T* t_begin = &*data_ + (space_in_types - dist);
+    T* t_begin = unaligned_write_size(dist);
     T* t_cur = t_begin;
     try {
       for (; f != l; ++f, ++t_cur) alloc_traits::construct(a, t_cur, *f);
@@ -203,7 +259,8 @@ struct leaky_vector {
       : leaky_vector(std::move(rhs)) {}
 
   span_type as_span() const noexcept {
-    return {data_ + size_offset(), data_ + size_offset() + small_size()};
+    auto p = begin_end();
+    return {p.first, p.second};
   }
 
   friend bool operator==(const leaky_vector& x, const leaky_vector& y) {
@@ -246,9 +303,9 @@ template <typename T, typename Alloc>
 class vector;
 
 template <typename T, typename Alloc>
-class leaky_vector : detail::leaky_vector<T, gsl::span<T>, Alloc> {
+class leaky_vector : detail::leaky_vector<T, gsl::span<const T>, Alloc> {
   friend class vector<T, Alloc>;
-  using base = detail::leaky_vector<T, gsl::span<T>, Alloc>;
+  using base = detail::leaky_vector<T, gsl::span<const T>, Alloc>;
   base& as_base() noexcept { return *this; };
   const base& as_base() const noexcept { return *this; };
 
@@ -295,11 +352,11 @@ class vector : public leaky_vector<T, Alloc> {
   vector(Args&&... args) : base(std::forward<Args>(args)...) {}
 
   void destroy(allocator_type a) {
-    T* begin = this->data_ + this->size_offset();
-    T* end = begin + this->small_size();
-    detail::destroy(begin, end, a);
+    T *f, *l;
+    std::tie(f, l) = this->begin_end();
+    detail::destroy(f, l, a);
     alloc_traits::deallocate(
-        a, this->data_, (this->small_size() + this->size_offset()) * sizeof(T));
+        a, this->data_, this->required_allocation_size(l - f));
     this->data_ = nullptr;
   }
 
