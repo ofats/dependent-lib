@@ -16,7 +16,8 @@ include_directories(${gsl_INCLUDE_DIRS})
 
 set(HEADER_FILE
     catch.h
-    dependent.h)
+    dependent.h
+    dense_allocator.h)
 set(SOURCE_FILES
     main_catch.cpp
     dependent_unittests.cpp)

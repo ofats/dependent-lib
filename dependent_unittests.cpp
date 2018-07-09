@@ -1,10 +1,11 @@
 #include "catch.h"
+#include "dense_allocator.h"
 #include "dependent.h"
 
-#include <map>
-#include <set>
 #include <iostream>
+#include <map>
 #include <scoped_allocator>
+#include <set>
 
 namespace {
 
@@ -109,6 +110,9 @@ TEST_CASE("big_vector_of_vector", "[dependent_lib]") {
 
   std::vector<short> input(1'000'000, 1);
   v.emplace_back(input);
+
+  auto sp = v.back().as_span();
+  REQUIRE(std::all_of(sp.begin(), sp.end(), [](auto v) { return v == 1; }));
 }
 
 TEST_CASE("map_of_vector", "[dependent_lib]") {
@@ -119,6 +123,17 @@ TEST_CASE("map_of_vector", "[dependent_lib]") {
 
   std::map<int, vec_t, std::less<>, outer_allocator> mp;
   mp.emplace(3, arr1);
+}
+
+TEST_CASE("vector_with_dense_allocator", "[dependent_lib]") {
+  using dense_allocators =
+      dependent_lib::dense_allocators<std::allocator<int>, int>;
+  using allocator_handle =
+      dependent_lib::dense_allocator_handler<int, dense_allocators>;
+  dense_allocators resourse(std::allocator<int>{});
+  std::vector<int, allocator_handle> v(allocator_handle{&resourse});
+  for (int i = 0; i < 10'000; ++i)
+    v.insert(v.end(), std::begin(arr1), std::end(arr1));
 }
 
 // TODO: tests

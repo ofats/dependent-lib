@@ -189,26 +189,6 @@ struct leaky_vector {
 
   pointer data_;
 
-  std::pair<const T*, const T*> begin_end() const noexcept {
-    const T* begin = &*data_ + 1;
-    if (small_size() < big_size_marker) {
-      return { begin, begin + small_size() };
-    }
-    std::size_t big_size = 0;
-    std::tie(begin, big_size) = unaligned_read<std::size_t>(begin);
-    return { begin, begin + big_size };
-  }
-
-  std::pair<T*, T*> begin_end() noexcept {
-    auto p = static_cast<const leaky_vector*>(this)->begin_end();
-    return {const_cast<T*>(p.first), const_cast<T*>(p.second)};
-  }
-
-  size_type size() const noexcept {
-    auto p = begin_end();
-    return p.second - p.first;
-  }
-
   detail::size_type_t<T>& small_size() {
     return *reinterpret_cast<detail::size_type_t<T>*>(data_);
   }
@@ -227,6 +207,26 @@ struct leaky_vector {
     auto p = unaligned_read<std::size_t>(&*data_ + 1);
     p.second = static_cast<std::size_t>(dist);
     return p.first;
+  }
+
+  std::pair<const T*, const T*> begin_end() const noexcept {
+    const T* begin = &*data_ + 1;
+    if (small_size() < big_size_marker) {
+      return { begin, begin + small_size() };
+    }
+    std::size_t big_size;
+    std::tie(begin, big_size) = unaligned_read<std::size_t>(begin);
+    return { begin, begin + big_size };
+  }
+
+  std::pair<T*, T*> begin_end() noexcept {
+    auto p = static_cast<const leaky_vector*>(this)->begin_end();
+    return {const_cast<T*>(p.first), const_cast<T*>(p.second)};
+  }
+
+  size_type size() const noexcept {
+    auto p = begin_end();
+    return p.second - p.first;
   }
 
   constexpr static std::size_t required_allocation_size(std::ptrdiff_t dist) {
@@ -358,12 +358,6 @@ class vector : public leaky_vector<T, Alloc> {
     alloc_traits::deallocate(
         a, this->data_, this->required_allocation_size(l - f));
     this->data_ = nullptr;
-  }
-
-  friend bool operator<(const vector& x, const vector& y) {
-    (void)x;
-    (void)y;
-    return true;
   }
 };
 
