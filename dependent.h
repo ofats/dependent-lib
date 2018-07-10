@@ -231,7 +231,7 @@ struct leaky_vector {
 
   constexpr static std::size_t required_allocation_size(std::ptrdiff_t dist) {
     auto space_in_types = detail::required_space_in_types<T>(dist);
-    return space_in_types * sizeof(T);
+    return space_in_types;
   }
 
   template <typename I, typename = std::enable_if_t<ForwardIterator<I>>>

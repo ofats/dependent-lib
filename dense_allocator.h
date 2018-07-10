@@ -38,7 +38,7 @@ class single_dense_allocator {
 
   T* fit_allocation(std::size_t size) {
     auto* to_return = tail_;
-    tail_ += size / sizeof(T);
+    tail_ += size;
     return reinterpret_cast<T*>(to_return);
   }
 
