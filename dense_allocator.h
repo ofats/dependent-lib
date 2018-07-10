@@ -133,6 +133,14 @@ class dense_allocator_handler {
   }
 
   void deallocate(T*, std::size_t) {}
+
+  friend bool operator==(const dense_allocator_handler& x, const dense_allocator_handler& y) {
+    return x.dense_allocator_ == y.dense_allocator_;
+  }
+
+  friend bool operator!=(const dense_allocator_handler& x, const dense_allocator_handler& y) {
+    return !(x == y);
+  }
 };
 
 }  // namespace dependent_lib

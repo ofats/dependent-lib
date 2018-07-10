@@ -136,6 +136,25 @@ TEST_CASE("vector_with_dense_allocator", "[dependent_lib]") {
     v.insert(v.end(), std::begin(arr1), std::end(arr1));
 }
 
+TEST_CASE("vector_of_densly_allocated_strings",
+          "[dependent_lib, dense_allocator]") {
+  using dense_allocators =
+      dependent_lib::dense_allocators<std::allocator<char>, char>;
+  using allocator_handle =
+      dependent_lib::dense_allocator_handler<char, dense_allocators>;
+  using string_with_allocator =
+      std::basic_string<char, std::char_traits<char>, allocator_handle>;
+  using resulting_allocator =
+      std::scoped_allocator_adaptor<std::allocator<string_with_allocator>,
+                                    allocator_handle>;
+
+  dense_allocators allocs(std::allocator<char>{});
+  std::vector<string_with_allocator, resulting_allocator> v(
+      {std::allocator<string_with_allocator>{}, allocator_handle(&allocs)});
+  v.emplace_back("abc");
+  v.emplace_back(50, 'a');
+}
+
 // TODO: tests
 
 }  // namespace
