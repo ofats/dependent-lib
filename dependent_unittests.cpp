@@ -2,7 +2,6 @@
 #include "dense_allocator.h"
 #include "dependent.h"
 
-#include <iostream>
 #include <map>
 #include <scoped_allocator>
 #include <set>
@@ -20,7 +19,7 @@ TEST_CASE("size_type", "[dependent_lib]") {
   static_assert(std::is_same<size_type_t<int64_t>, uint64_t>::value, "");
 
   struct big {
-      uint64_t one, two;
+    uint64_t one, two;
   };
   static_assert(std::is_same<size_type_t<big>, uint64_t>::value, "");
 }
@@ -60,11 +59,11 @@ TEST_CASE("concepts", "[dependent_lib]") {
 }
 
 TEST_CASE("destroy", "[dependent_lib]") {
-    std::allocator<short> a{};
-    dependent_lib::vector<short, std::allocator<short>> dv(
-        std::allocator_arg_t{}, a, std::begin(arr1), std::end(arr1));
-    REQUIRE(dv.as_span().size() == 5);
-    dv.destroy(a);
+  std::allocator<short> a{};
+  dependent_lib::vector<short, std::allocator<short>> dv(
+      std::allocator_arg_t{}, a, std::begin(arr1), std::end(arr1));
+  REQUIRE(dv.as_span().size() == 5);
+  dv.destroy(a);
 }
 
 TEST_CASE("set_of_vector", "[dependent_lib]") {
@@ -155,6 +154,25 @@ TEST_CASE("vector_of_densly_allocated_strings",
   v.emplace_back(50, 'a');
 }
 
-// TODO: tests
+TEST_CASE("map_dependent_vectors", "[dependent_lib, dense_allocator]") {
+  using backing_allocator = std::allocator<void>;
+  using dense_allocators =
+      dependent_lib::dense_allocators<backing_allocator, char,
+                                      dependent_lib::unknown_type<48, 8>>;
+
+  using raw_vec_t_handle = dependent_lib::dense_allocator_handler<char, dense_allocators>;
+  using vec_t_handle = dependent_lib::allocator_adaptor<raw_vec_t_handle>;
+  using vec_t = dependent_lib::vector<char, vec_t_handle>;
+
+  using raw_map_handle = dependent_lib::dense_allocator_handler<
+          std::pair<const vec_t, vec_t>, dense_allocators>;
+  using map_handle =
+      dependent_lib::allocator_adaptor<raw_map_handle>;
+  using map_t = std::map<vec_t, vec_t, std::less<>, map_handle>;
+
+  dense_allocators allocs(backing_allocator{});
+  map_t container(&allocs);
+  container.emplace(std::string("abc"), std::string("def"));
+}
 
 }  // namespace

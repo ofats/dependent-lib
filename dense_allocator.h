@@ -88,6 +88,12 @@ struct dense_allocators
 
   backing_allocator_type backing_allocator_;
 
+  // This is an only way I could find to make a reasonable error message with sizes.
+  template <std::size_t size, std::size_t alignment>
+  detail::single_dense_allocator<size, alignment, backing_allocator_type>& as_allocator_for_T() {
+    return *this;
+  }
+
   dense_allocators(const backing_allocator_type& a)
       : detail::single_dense_allocator<sizeof(Ts), alignof(Ts), backing_allocator_type>(a)...,
         backing_allocator_(a) {}
@@ -98,6 +104,9 @@ class dense_allocator_handler {
   using backing_allocator_type =
       typename DenseAllocator::backing_allocator_type;
   using alloc_traits = std::allocator_traits<backing_allocator_type>;
+
+  template <typename U, typename A>
+  friend class dense_allocator_handler;
 
   DenseAllocator* dense_allocator_;
 
@@ -127,9 +136,7 @@ class dense_allocator_handler {
   }
 
   T* allocate(std::size_t size) {
-    detail::single_dense_allocator<sizeof(T), alignof(T),
-                                   backing_allocator_type>&
-        as_t_alloc(*dense_allocator_);
+    auto& as_t_alloc = dense_allocator_->template as_allocator_for_T<sizeof(T), alignof(T)>();
     return static_cast<T*>(as_t_alloc.allocate(size));
   }
 
