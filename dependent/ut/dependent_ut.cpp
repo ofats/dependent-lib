@@ -1,6 +1,6 @@
-#include "catch.h"
-#include "dense_allocator.h"
-#include "dependent.h"
+#include "catch/catch.h"
+#include "dependent/dense_allocator.h"
+#include "dependent/dependent.h"
 
 #include <map>
 #include <scoped_allocator>
