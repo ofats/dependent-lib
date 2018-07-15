@@ -1,4 +1,4 @@
-# Dependent lib
+# Dependent
 
 # How to build it?
 In debug mode:
