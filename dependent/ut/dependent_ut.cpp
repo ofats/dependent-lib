@@ -1,10 +1,11 @@
-#include "catch/catch.h"
 #include "dependent/dense_allocator.h"
 #include "dependent/dependent.h"
 
 #include <map>
 #include <scoped_allocator>
 #include <set>
+
+#include "catch/catch.h"
 
 namespace {
 

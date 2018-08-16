@@ -1,6 +1,7 @@
 #ifndef _DEPENDENT_LIB_H_
 #define _DEPENDENT_LIB_H_
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -9,9 +10,13 @@
 #include <tuple>
 #include <type_traits>
 
-#include <gsl/span>
+#include "dependent/future_std_stubs.h"
 
 namespace dependent_lib {
+
+// This is a cusomization point for the prefered span.
+template <typename T>
+using span = future_std_stubs::span<T>;
 
 namespace detail {
 
@@ -212,11 +217,11 @@ struct leaky_vector {
   std::pair<const T*, const T*> begin_end() const noexcept {
     const T* begin = &*data_ + 1;
     if (small_size() < big_size_marker) {
-      return { begin, begin + small_size() };
+      return {begin, begin + small_size()};
     }
     std::size_t big_size;
     std::tie(begin, big_size) = unaligned_read<std::size_t>(begin);
-    return { begin, begin + big_size };
+    return {begin, begin + big_size};
   }
 
   std::pair<T*, T*> begin_end() noexcept {
@@ -303,9 +308,9 @@ template <typename T, typename Alloc>
 class vector;
 
 template <typename T, typename Alloc>
-class leaky_vector : detail::leaky_vector<T, gsl::span<const T>, Alloc> {
+class leaky_vector : detail::leaky_vector<T, span<const T>, Alloc> {
   friend class vector<T, Alloc>;
-  using base = detail::leaky_vector<T, gsl::span<const T>, Alloc>;
+  using base = detail::leaky_vector<T, span<const T>, Alloc>;
   base& as_base() noexcept { return *this; };
   const base& as_base() const noexcept { return *this; };
 
@@ -355,8 +360,8 @@ class vector : public leaky_vector<T, Alloc> {
     T *f, *l;
     std::tie(f, l) = this->begin_end();
     detail::destroy(f, l, a);
-    alloc_traits::deallocate(
-        a, this->data_, this->required_allocation_size(l - f));
+    alloc_traits::deallocate(a, this->data_,
+                             this->required_allocation_size(l - f));
     this->data_ = nullptr;
   }
 };

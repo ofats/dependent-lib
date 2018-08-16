@@ -9,9 +9,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -Werror -g")
 
 project(dependent_lib)
 
-include(FindPkgConfig)
-pkg_search_module(gsl REQUIRED gsl)
-
 include_directories(./)
 
 add_subdirectory(dependent)
