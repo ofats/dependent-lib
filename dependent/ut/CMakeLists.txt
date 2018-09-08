@@ -4,7 +4,9 @@ project(dependent_ut)
 
 set(SOURCE_FILES
     dependent_ut.cpp
-    future_std_stubs_ut.cpp)
+    future_std_stubs_ut.cpp
+    stats_allocator_ut.cpp
+    )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
