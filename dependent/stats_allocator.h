@@ -82,6 +82,13 @@ class stats_allocator {
   using size_type = typename std_traits::size_type;
   using const_void_pointer = typename std_traits::const_void_pointer;
 
+  constexpr stats_allocator() noexcept = default;
+  constexpr stats_allocator(const stats_allocator&) noexcept = default;
+  constexpr stats_allocator& operator=(const stats_allocator&) noexcept = default;
+
+  template <typename U>
+  stats_allocator(const stats_allocator<U, Tag>&) {}
+
   static pointer allocate(size_type n, const_void_pointer hint = 0) {
     global_stats::template report_allocation<T>(n * sizeof(T));
     return std::allocator<T>().allocate(n, hint);

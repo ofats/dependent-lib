@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -34,12 +35,23 @@ void type_checks() {
                                typename traits::template rebind_alloc<char>>);
 }
 
+// Dealing with libstdc++ lack of support for hashing strings with a non-default
+// allocator.
+struct string_hash {
+  template <typename Char, typename Traits, typename Alloc>
+  std::size_t operator()(
+      const std::basic_string<Char, Traits, Alloc>& str) const {
+    using view = std::basic_string_view<Char, Traits>;
+    return std::hash<view>{}(str);
+  }
+};
+
 template <typename Tag>
 struct stats_containers {
   template <typename T>
   using vector = std::vector<T, dependent::stats_allocator<T, Tag>>;
 
-  template <typename Key, typename T, typename Hash = std::hash<Key>,
+  template <typename Key, typename T, typename Hash = string_hash,
             typename KeyEqual = std::equal_to<Key>>
   using unordered_map = std::unordered_map<
       Key, T, Hash, KeyEqual,
@@ -60,7 +72,13 @@ TEST_CASE("type_checks", "[stats_allocator, dependent_lib]") {
 
   // Actual test
   struct tag {};
+
   type_checks<dependent::stats_allocator, tag>();
+
+  using alloc = dependent::stats_allocator<int, tag>;
+  static_assert(std::is_trivially_default_constructible_v<alloc>);
+  static_assert(std::is_trivially_copyable_v<alloc>);
+  static_assert(std::is_trivially_destructible_v<alloc>);
 }
 
 TEST_CASE("std_vector_reserve", "[stats_allocator, dependent_lib]") {
