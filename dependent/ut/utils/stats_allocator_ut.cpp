@@ -1,4 +1,4 @@
-#include "dependent/stats_allocator.h"
+#include "dependent/utils/stats_allocator.h"
 
 #include <memory>
 #include <string>
@@ -7,6 +7,8 @@
 #include <vector>
 
 #include "catch/catch.h"
+
+#include "dependent/utils/stats_containers.h"
 
 namespace {
 
@@ -35,35 +37,6 @@ void type_checks() {
                                typename traits::template rebind_alloc<char>>);
 }
 
-// Dealing with libstdc++ lack of support for hashing strings with a non-default
-// allocator.
-struct string_hash {
-  template <typename Char, typename Traits, typename Alloc>
-  std::size_t operator()(
-      const std::basic_string<Char, Traits, Alloc>& str) const {
-    using view = std::basic_string_view<Char, Traits>;
-    return std::hash<view>{}(str);
-  }
-};
-
-template <typename Tag>
-struct stats_containers {
-  template <typename T>
-  using vector = std::vector<T, dependent::stats_allocator<T, Tag>>;
-
-  template <typename Key, typename T, typename Hash = string_hash,
-            typename KeyEqual = std::equal_to<Key>>
-  using unordered_map = std::unordered_map<
-      Key, T, Hash, KeyEqual,
-      dependent::stats_allocator<std::pair<const Key, T>, Tag>>;
-
-  template <typename Char, typename CharTraits = std::char_traits<Char>>
-  using basic_string = std::basic_string<Char, CharTraits,
-                                         dependent::stats_allocator<Char, Tag>>;
-
-  using string = basic_string<char>;
-};
-
 }  // namespace
 
 TEST_CASE("type_checks", "[stats_allocator, dependent_lib]") {
@@ -88,7 +61,7 @@ TEST_CASE("std_vector_reserve", "[stats_allocator, dependent_lib]") {
   REQUIRE(stats::total_allocated_size() == 0u);
 
   {
-    stats_containers<tag>::vector<int> v(100);
+    dependent::stats_containers<tag>::vector<int> v(100);
     REQUIRE(stats::total_allocated_size() == v.capacity() * sizeof(int));
     REQUIRE(stats::allocated_size_for_t<int>() == v.capacity() * sizeof(int));
   }
@@ -99,10 +72,9 @@ TEST_CASE("std_vector_reserve", "[stats_allocator, dependent_lib]") {
 TEST_CASE("std_unordered_map_of_strings", "[stats_allocator, dependent_lib]") {
   struct tag {};
   using stats = dependent::area_stats<tag>;
+  using containers = dependent::stats_containers<tag>;
 
-  stats_containers<tag>::unordered_map<stats_containers<tag>::string,
-                                       stats_containers<tag>::string>
-      m;
+  containers::unordered_map<containers::string, containers::string> m;
 
   REQUIRE(stats::total_allocated_size() == 0);
 

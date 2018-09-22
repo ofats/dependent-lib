@@ -1,5 +1,5 @@
-#ifndef _DEPENDEDENT_STATS_ALLOCATOR_H_
-#define _DEPENDEDENT_STATS_ALLOCATOR_H_
+#ifndef _DEPENDEDENT_UTILS_STATS_ALLOCATOR_H_
+#define _DEPENDEDENT_UTILS_STATS_ALLOCATOR_H_
 
 #include <cstddef>
 #include <memory>
@@ -84,7 +84,8 @@ class stats_allocator {
 
   constexpr stats_allocator() noexcept = default;
   constexpr stats_allocator(const stats_allocator&) noexcept = default;
-  constexpr stats_allocator& operator=(const stats_allocator&) noexcept = default;
+  constexpr stats_allocator& operator=(const stats_allocator&) noexcept =
+      default;
 
   template <typename U>
   stats_allocator(const stats_allocator<U, Tag>&) {}
@@ -102,4 +103,4 @@ class stats_allocator {
 
 }  // namespace dependent
 
-#endif  // _DEPENDEDENT_STATS_ALLOCATOR_H_
+#endif  // _DEPENDEDENT_UTILS_STATS_ALLOCATOR_H_
