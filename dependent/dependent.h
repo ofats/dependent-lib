@@ -203,32 +203,36 @@ struct leaky_vector {
     return {p.first, p.second};
   }
 
-  friend bool operator==(const leaky_vector& x, const leaky_vector& y) {
+  friend bool operator==(const leaky_vector& x,
+                         const leaky_vector& y) noexcept {
     auto xs = x.as_span();
     auto ys = y.as_span();
     return std::equal(xs.begin(), xs.end(), ys.begin(), ys.end());
   }
 
-  friend bool operator!=(const leaky_vector& x, const leaky_vector& y) {
+  friend bool operator!=(const leaky_vector& x,
+                         const leaky_vector& y) noexcept {
     return !(x == y);
   }
 
-  friend bool operator<(const leaky_vector& x, const leaky_vector& y) {
+  friend bool operator<(const leaky_vector& x, const leaky_vector& y) noexcept {
     auto xs = x.as_span();
     auto ys = y.as_span();
     return std::lexicographical_compare(xs.begin(), xs.end(), ys.begin(),
                                         ys.end());
   }
 
-  friend bool operator>(const leaky_vector& x, const leaky_vector& y) {
+  friend bool operator>(const leaky_vector& x, const leaky_vector& y) noexcept {
     return y < x;
   }
 
-  friend bool operator<=(const leaky_vector& x, const leaky_vector& y) {
+  friend bool operator<=(const leaky_vector& x,
+                         const leaky_vector& y) noexcept {
     return !(x > y);
   }
 
-  friend bool operator>=(const leaky_vector& x, const leaky_vector& y) {
+  friend bool operator>=(const leaky_vector& x,
+                         const leaky_vector& y) noexcept {
     return !(x < y);
   }
 };
