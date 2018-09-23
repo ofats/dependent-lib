@@ -12,7 +12,7 @@ namespace {
 constexpr short arr1[] = {1, 2, 6, 2, 6};
 
 TEST_CASE("size_type", "[dependent_lib]") {
-  using namespace dependent_lib::detail;
+  using namespace dependent::detail;
 
   static_assert(std::is_same<size_type_t<int8_t>, uint8_t>::value, "");
   static_assert(std::is_same<size_type_t<int16_t>, uint16_t>::value, "");
@@ -26,7 +26,7 @@ TEST_CASE("size_type", "[dependent_lib]") {
 }
 
 TEST_CASE("required_size_in_types", "[dependent_lib]") {
-  using namespace dependent_lib::detail;
+  using namespace dependent::detail;
   constexpr int64_t uint32_max = std::numeric_limits<uint32_t>::max();
 
   // fits
@@ -45,7 +45,7 @@ TEST_CASE("required_size_in_types", "[dependent_lib]") {
 }
 
 TEST_CASE("concepts", "[dependent_lib]") {
-  using namespace dependent_lib;
+  using namespace dependent;
 
   static_assert(!ForwardIterator<int>, "");
   static_assert(ForwardIterator<int*>, "");
@@ -61,19 +61,19 @@ TEST_CASE("concepts", "[dependent_lib]") {
 
 TEST_CASE("destroy", "[dependent_lib]") {
   std::allocator<short> a{};
-  dependent_lib::vector<short, std::allocator<short>> dv(
+  dependent::vector<short, std::allocator<short>> dv(
       std::allocator_arg_t{}, a, std::begin(arr1), std::end(arr1));
   REQUIRE(dv.as_span().size() == 5);
   dv.destroy(a);
 }
 
 TEST_CASE("set_of_vector", "[dependent_lib]") {
-  using vec_allocator = dependent_lib::allocator_adaptor<std::allocator<short>>;
-  using vec_t = dependent_lib::vector<short, vec_allocator>;
-  static_assert(dependent_lib::DependentType<vec_t, vec_allocator>, "");
+  using vec_allocator = dependent::allocator_adaptor<std::allocator<short>>;
+  using vec_t = dependent::vector<short, vec_allocator>;
+  static_assert(dependent::DependentType<vec_t, vec_allocator>, "");
   static_assert(std::uses_allocator<vec_t, vec_allocator>::value, "");
 
-  using set_allocator = dependent_lib::allocator_adaptor<std::allocator<vec_t>>;
+  using set_allocator = dependent::allocator_adaptor<std::allocator<vec_t>>;
   static_assert(std::uses_allocator<vec_t, set_allocator>::value, "");
 
   std::set<vec_t, std::less<>, set_allocator> s;
@@ -82,13 +82,12 @@ TEST_CASE("set_of_vector", "[dependent_lib]") {
 }
 
 TEST_CASE("vector_of_vector", "[dependent_lib]") {
-  using vec_allocator = dependent_lib::allocator_adaptor<std::allocator<short>>;
-  using vec_t = dependent_lib::vector<short, vec_allocator>;
-  static_assert(dependent_lib::DependentType<vec_t, vec_allocator>, "");
+  using vec_allocator = dependent::allocator_adaptor<std::allocator<short>>;
+  using vec_t = dependent::vector<short, vec_allocator>;
+  static_assert(dependent::DependentType<vec_t, vec_allocator>, "");
   static_assert(std::uses_allocator<vec_t, vec_allocator>::value, "");
 
-  using outer_allocator =
-      dependent_lib::allocator_adaptor<std::allocator<vec_t>>;
+  using outer_allocator = dependent::allocator_adaptor<std::allocator<vec_t>>;
   static_assert(std::uses_allocator<vec_t, outer_allocator>::value, "");
 
   std::vector<vec_t, outer_allocator> v;
@@ -97,13 +96,12 @@ TEST_CASE("vector_of_vector", "[dependent_lib]") {
 }
 
 TEST_CASE("big_vector_of_vector", "[dependent_lib]") {
-  using vec_allocator = dependent_lib::allocator_adaptor<std::allocator<short>>;
-  using vec_t = dependent_lib::vector<short, vec_allocator>;
-  static_assert(dependent_lib::DependentType<vec_t, vec_allocator>, "");
+  using vec_allocator = dependent::allocator_adaptor<std::allocator<short>>;
+  using vec_t = dependent::vector<short, vec_allocator>;
+  static_assert(dependent::DependentType<vec_t, vec_allocator>, "");
   static_assert(std::uses_allocator<vec_t, vec_allocator>::value, "");
 
-  using outer_allocator =
-      dependent_lib::allocator_adaptor<std::allocator<vec_t>>;
+  using outer_allocator = dependent::allocator_adaptor<std::allocator<vec_t>>;
   static_assert(std::uses_allocator<vec_t, outer_allocator>::value, "");
 
   std::vector<vec_t, outer_allocator> v;
@@ -116,10 +114,10 @@ TEST_CASE("big_vector_of_vector", "[dependent_lib]") {
 }
 
 TEST_CASE("map_of_vector", "[dependent_lib]") {
-  using vec_allocator = dependent_lib::allocator_adaptor<std::allocator<int>>;
-  using vec_t = dependent_lib::vector<int, vec_allocator>;
-  using outer_allocator = dependent_lib::allocator_adaptor<
-      std::allocator<std::pair<const int, vec_t>>>;
+  using vec_allocator = dependent::allocator_adaptor<std::allocator<int>>;
+  using vec_t = dependent::vector<int, vec_allocator>;
+  using outer_allocator =
+      dependent::allocator_adaptor<std::allocator<std::pair<const int, vec_t>>>;
 
   std::map<int, vec_t, std::less<>, outer_allocator> mp;
   mp.emplace(3, arr1);
@@ -127,9 +125,9 @@ TEST_CASE("map_of_vector", "[dependent_lib]") {
 
 TEST_CASE("vector_with_dense_allocator", "[dependent_lib]") {
   using dense_allocators =
-      dependent_lib::dense_allocators<std::allocator<int>, int>;
+      dependent::dense_allocators<std::allocator<int>, int>;
   using allocator_handle =
-      dependent_lib::dense_allocator_handler<int, dense_allocators>;
+      dependent::dense_allocator_handler<int, dense_allocators>;
   dense_allocators resourse(std::allocator<int>{});
   std::vector<int, allocator_handle> v(allocator_handle{&resourse});
   for (int i = 0; i < 10'000; ++i)
@@ -139,9 +137,9 @@ TEST_CASE("vector_with_dense_allocator", "[dependent_lib]") {
 TEST_CASE("vector_of_densly_allocated_strings",
           "[dependent_lib, dense_allocator]") {
   using dense_allocators =
-      dependent_lib::dense_allocators<std::allocator<char>, char>;
+      dependent::dense_allocators<std::allocator<char>, char>;
   using allocator_handle =
-      dependent_lib::dense_allocator_handler<char, dense_allocators>;
+      dependent::dense_allocator_handler<char, dense_allocators>;
   using string_with_allocator =
       std::basic_string<char, std::char_traits<char>, allocator_handle>;
   using resulting_allocator =
@@ -158,18 +156,18 @@ TEST_CASE("vector_of_densly_allocated_strings",
 TEST_CASE("map_dependent_vectors", "[dependent_lib, dense_allocator]") {
   using backing_allocator = std::allocator<void>;
   using dense_allocators =
-      dependent_lib::dense_allocators<backing_allocator, char,
-                                      dependent_lib::unknown_type<48, 8>>;
+      dependent::dense_allocators<backing_allocator, char,
+                                  dependent::unknown_type<48, 8>>;
 
   using raw_vec_t_handle =
-      dependent_lib::dense_allocator_handler<char, dense_allocators>;
-  using vec_t_handle = dependent_lib::allocator_adaptor<raw_vec_t_handle>;
-  using vec_t = dependent_lib::vector<char, vec_t_handle>;
+      dependent::dense_allocator_handler<char, dense_allocators>;
+  using vec_t_handle = dependent::allocator_adaptor<raw_vec_t_handle>;
+  using vec_t = dependent::vector<char, vec_t_handle>;
 
-  using raw_map_handle = dependent_lib::dense_allocator_handler<
-          std::pair<const vec_t, vec_t>, dense_allocators>;
-  using map_handle =
-      dependent_lib::allocator_adaptor<raw_map_handle>;
+  using raw_map_handle =
+      dependent::dense_allocator_handler<std::pair<const vec_t, vec_t>,
+                                         dense_allocators>;
+  using map_handle = dependent::allocator_adaptor<raw_map_handle>;
   using map_t = std::map<vec_t, vec_t, std::less<>, map_handle>;
 
   dense_allocators allocs(backing_allocator{});
@@ -180,18 +178,17 @@ TEST_CASE("map_dependent_vectors", "[dependent_lib, dense_allocator]") {
 TEST_CASE("vector_dependent_vectors", "[dependent_lib, dense_allocator]") {
   using backing_allocator = std::allocator<void>;
   using dense_allocators =
-      dependent_lib::dense_allocators<backing_allocator, int,
-                                      dependent_lib::unknown_type<8, 8>>;
+      dependent::dense_allocators<backing_allocator, int,
+                                  dependent::unknown_type<8, 8>>;
 
   using raw_vec_t_handle =
-      dependent_lib::dense_allocator_handler<int, dense_allocators>;
-  using vec_t_handle = dependent_lib::allocator_adaptor<raw_vec_t_handle>;
-  using vec_t = dependent_lib::vector<int, vec_t_handle>;
+      dependent::dense_allocator_handler<int, dense_allocators>;
+  using vec_t_handle = dependent::allocator_adaptor<raw_vec_t_handle>;
+  using vec_t = dependent::vector<int, vec_t_handle>;
 
   using raw_outter_vec_handle =
-      dependent_lib::dense_allocator_handler<vec_t, dense_allocators>;
-  using outter_vec_handle =
-      dependent_lib::allocator_adaptor<raw_outter_vec_handle>;
+      dependent::dense_allocator_handler<vec_t, dense_allocators>;
+  using outter_vec_handle = dependent::allocator_adaptor<raw_outter_vec_handle>;
   using outter_vec_t = std::vector<vec_t, outter_vec_handle>;
 
   dense_allocators allocs(backing_allocator{});

@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-namespace dependent_lib {
+namespace dependent {
 
 namespace detail {
 
@@ -153,4 +153,4 @@ class dense_allocator_handler {
   }
 };
 
-}  // namespace dependent_lib
+}  // namespace dependent

@@ -1,5 +1,5 @@
-#ifndef _DEPENDENT_LIB_H_
-#define _DEPENDENT_LIB_H_
+#ifndef _DEPENDENT_H_
+#define _DEPENDENT_H_
 
 #include <algorithm>
 #include <cassert>
@@ -13,7 +13,7 @@
 #include "dependent/future_std_stubs.h"
 #include "dependent/meta.h"
 
-namespace dependent_lib {
+namespace dependent {
 
 // This is a cusomization point for the prefered span.
 template <typename T>
@@ -301,6 +301,6 @@ class vector : public leaky_vector<T, Alloc> {
   }
 };
 
-}  // namespace dependent_lib
+}  // namespace dependent
 
 #endif  // _DEPENDENT_LIB_H_

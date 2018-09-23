@@ -3,7 +3,7 @@
 
 #include <iterator>
 
-namespace dependent_lib {
+namespace dependent {
 
 namespace detail {
 
@@ -90,6 +90,6 @@ constexpr bool RandomAccessIterator = detail::RandomIteratorImpl<I>::value;
 template <typename R>
 constexpr bool ForwardRange = detail::ForwardRangeImpl<R>::value;
 
-}  // namespace dependent_lib
+}  // namespace dependent
 
 #endif  // _META_H_
