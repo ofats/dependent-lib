@@ -7,6 +7,7 @@
 
 #include "dependent/utils/stats_allocator.h"
 #include "dependent/utils/stats_containers.h"
+#include "dependent/limited_string.h"
 
 constexpr std::string_view c_items_separator = "@@@";
 
@@ -33,17 +34,21 @@ void read_into_container(std::string_view file_name, Container* container) {
 
   std::string buffer;
   std::string element;
+  std::size_t max_size = 0;
   while (in) {
     std::getline(in, buffer);
     if (buffer == c_items_separator) {
-      if (!element.empty())
+      if (!element.empty()) {
+        max_size = std::max(max_size, element.size());
         it = container->insert(it, typename Container::value_type{element});
+      }
       element.clear();
       continue;
     }
     if (buffer.empty()) continue;
     element += buffer;
   }
+  std::cout << "Max size: " << max_size << std::endl;
 }
 
 int main(int argc, const char* argv[]) {
@@ -53,7 +58,7 @@ int main(int argc, const char* argv[]) {
     if (argc != 2) throw usage_err;
 
     struct tag {};
-    stats<tag>::unordered_set<stats<tag>::string> dict;
+    stats<tag>::unordered_set<dependent_lib::limited_string<35>> dict;
     read_into_container(argv[1], &dict);
 
     std::cout << "Allocated size: "
